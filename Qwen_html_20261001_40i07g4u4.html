@@ -56,7 +56,6 @@
     <button id="bDel" class="warn">🗑️ Delete Selected</button>
   </div>
 
-  <!-- ADDED BACK: Add Shapes Section -->
   <div class="section-title">Add Shapes</div>
   <div class="grp">
     <button id="bAddHull">+ Add Deck (Hull)</button>
@@ -83,6 +82,7 @@
     <button id="bMeasure" class="tool">📏 Tape Measurer</button>
     <button id="bText" class="tool">🔤 Add Text Label</button>
     <button id="bDoor" class="tool">🚪 Add Door</button>
+    <button id="bStairs" class="tool">🪜 Add Stairs</button>
   </div>
 
   <div class="section-title">View & Export</div>
@@ -144,6 +144,7 @@ function bridgeRoom(e){ return {x:e.x+2, y:e.y+2, w:e.w-4, L:e.L-4}; }
 function dimsText(e){
   if (e.type === 'bridge') return '(bridge ' + (e.w-4) + 'm x ' + (e.L-4) + 'm + 2m deck)';
   if (e.type === 'door') return '(door width: ' + e.w + 'm)';
+  if (e.type === 'stairs') return '(stairs ' + e.w + 'm x ' + e.L + 'm)';
   return '(' + e.L + 'm long x ' + e.w + 'm wide)';
 }
 
@@ -184,6 +185,32 @@ function drawElementOn(c, e, s, ox, oy, withTitles){
     c.beginPath(); c.moveTo(0, 0); c.lineTo(e.w, 0); c.stroke();
     const endY = e.w * (e.swing < 0 ? -1 : 1);
     c.beginPath(); c.arc(0, 0, e.w, 0, (Math.PI/2) * (e.swing < 0 ? -1 : 1), e.swing < 0); c.stroke();
+  } else if (e.type === 'stairs') {
+    // Draw stairs as a rectangle with parallel lines
+    c.strokeStyle = '#0f172a'; c.lineWidth = 3/s;
+    c.strokeRect(0, 0, e.w, e.L);
+    
+    // Calculate number of steps (aim for ~0.25m per step)
+    const numSteps = Math.max(2, Math.round(e.L / 0.25));
+    const stepHeight = e.L / numSteps;
+    
+    c.lineWidth = 1.5/s;
+    for (let i = 1; i < numSteps; i++) {
+      const y = i * stepHeight;
+      c.beginPath();
+      c.moveTo(0, y);
+      c.lineTo(e.w, y);
+      c.stroke();
+    }
+    
+    // Draw arrow to show direction
+    c.fillStyle = '#0f172a';
+    c.beginPath();
+    c.moveTo(e.w/2, e.L * 0.9);
+    c.lineTo(e.w/2 - 0.15, e.L * 0.8);
+    c.lineTo(e.w/2 + 0.15, e.L * 0.8);
+    c.closePath();
+    c.fill();
   }
   c.restore();
 
@@ -287,6 +314,11 @@ cv.addEventListener('mousedown', ev => {
   } else if (state.mode === 'place_door') {
     state.els.push({type: 'door', x: mx, y: my, w: 1.0, swing: 1});
     state.mode = null; cv.classList.remove('crosshair');
+  } else if (state.mode === 'place_stairs') {
+    state.els.push({type: 'stairs', x: mx, y: my, w: 1.5, L: 3.0});
+    state.sel = state.els.length - 1;
+    state.mode = null; cv.classList.remove('crosshair');
+    syncPanel();
   } else {
     const sel = state.els[state.sel];
     if (sel && Math.abs(mx - (sel.x + (sel.w||1))) < 8/state.zoom && Math.abs(my - (sel.y + (sel.L||1))) < 8/state.zoom){
@@ -377,7 +409,7 @@ function syncPanel(){
   if (!e) { $('pName').value = ''; return; }
   
   $('pName').value = e.title || e.content || '';
-  if (e.type === 'hull' || e.type === 'bridge') {
+  if (e.type === 'hull' || e.type === 'bridge' || e.type === 'stairs') {
     $('grpDims').style.display = 'block'; $('grpDims2').style.display = 'block';
     $('pW').value = e.type === 'bridge' ? e.w - 4 : e.w;
     $('pL').value = e.type === 'bridge' ? e.L - 4 : e.L;
@@ -399,7 +431,6 @@ $('pDoorW').addEventListener('input', () => { const e = state.els[state.sel]; if
 $('drawColor').addEventListener('input', (e) => { state.drawColor = e.target.value; });
 $('drawWidth').addEventListener('input', (e) => { state.drawWidth = Math.max(0.05, parseFloat(e.target.value) || 0.1); });
 
-// ADDED BACK: Hull and Bridge Buttons
 $('bAddHull').onclick = () => { 
   state.els.push({type:'hull', x:2, y:2, w:7, L:26, title:'NEW DECK'}); 
   state.sel = state.els.length - 1; 
@@ -420,6 +451,7 @@ $('bErase').onclick = () => { state.mode = 'erase'; cv.classList.add('crosshair'
 $('bMeasure').onclick = () => { state.mode = 'measure'; cv.classList.add('crosshair'); };
 $('bText').onclick = () => { state.mode = 'place_text'; cv.classList.add('crosshair'); };
 $('bDoor').onclick = () => { state.mode = 'place_door'; cv.classList.add('crosshair'); };
+$('bStairs').onclick = () => { state.mode = 'place_stairs'; cv.classList.add('crosshair'); };
 $('bDel').onclick = () => { if (state.sel >= 0){ state.els.splice(state.sel, 1); state.sel = -1; syncPanel(); draw(); } };
 $('bFit').onclick = fit;
 $('bZoomIn').onclick = () => { state.zoom = Math.min(200, state.zoom*1.3); draw(); };
@@ -504,6 +536,15 @@ $('bSvg').onclick = () => {
         const sweep = e.swing < 0 ? 0 : 1;
         const endY = e.w * (e.swing < 0 ? -1 : 1);
         parts.push(`<path d="M 0 0 L ${e.w} 0 A ${e.w} ${e.w} 0 0 ${sweep} 0 ${endY}" fill="none" stroke="#0f172a" stroke-width="0.03"/>`);
+      } else if (e.type === 'stairs') {
+        parts.push(`<rect x="0" y="0" width="${e.w}" height="${e.L}" fill="none" stroke="#0f172a" stroke-width="0.03"/>`);
+        const numSteps = Math.max(2, Math.round(e.L / 0.25));
+        const stepHeight = e.L / numSteps;
+        for (let i = 1; i < numSteps; i++) {
+          const y = i * stepHeight;
+          parts.push(`<line x1="0" y1="${y}" x2="${e.w}" y2="${y}" stroke="#0f172a" stroke-width="0.015"/>`);
+        }
+        parts.push(`<polygon points="${e.w/2},${e.L*0.9} ${e.w/2-0.15},${e.L*0.8} ${e.w/2+0.15},${e.L*0.8}" fill="#0f172a"/>`);
       }
       parts.push('</g>');
       if (e.type === 'hull' || e.type === 'bridge') {
