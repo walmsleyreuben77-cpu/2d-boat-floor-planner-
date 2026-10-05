@@ -119,90 +119,13 @@ function wall(x1, y1, x2, y2, thickness = 0.15) {
 
 const state = {
   els: [
-    // DECK 1: Engine & Storage (7.5m x 27m)
-    { type: 'hull', x: 0, y: 0, w: 7.5, L: 27, title: 'DECK 1: ENGINE & STORAGE', labels: [] },
-    
-    // Walls for Deck 1 - Engine Room at front, Storage at back
-    wall(0, 8, 7.5, 8), // Horizontal wall separating engine room from storage
-    wall(3.75, 8, 3.75, 27), // Center wall in storage area
-    
-    { type: 'text', x: 1.5, y: 3, content: 'ENGINE ROOM', fontSize: 0.6, color: '#334155' },
-    { type: 'text', x: 1.5, y: 15, content: 'MAIN STORAGE', fontSize: 0.6, color: '#334155' },
-    { type: 'text', x: 5.5, y: 15, content: 'MAIN STORAGE', fontSize: 0.6, color: '#334155' },
-    
-    // DECK 2: Living & Garage (7.5m x 27m) - Workshop at FRONT, Garage at BACK
-    { type: 'hull', x: 10, y: 0, w: 7.5, L: 27, title: 'DECK 2: LIVING & GARAGE', labels: [] },
-    
-    // Walls for Deck 2 - Workshop at front (small), bedrooms in middle, garage at back
-    wall(10, 3, 17.5, 3), // Horizontal wall - workshop at very front
-    wall(13.75, 0, 13.75, 3), // Center wall in workshop
-    wall(10, 3, 10, 12), // Left wall - hallway
-    wall(17.5, 3, 17.5, 12), // Right wall - hallway
-    wall(10, 6, 13.75, 6), // Horizontal - Master bed divider
-    wall(13.75, 6, 17.5, 6), // Horizontal - En-suite divider
-    wall(13.75, 3, 13.75, 9), // Vertical - between master and beds
-    wall(10, 9, 17.5, 9), // Horizontal - bathroom/laundry
-    wall(13.75, 9, 13.75, 12), // Vertical - bathroom/laundry divider
-    wall(10, 12, 17.5, 12), // Horizontal - cupboard/pet room
-    wall(13.75, 12, 13.75, 15), // Vertical - cupboard/pet divider
-    wall(10, 15, 17.5, 15), // Horizontal - hallway start
-    wall(10, 22, 17.5, 22), // Horizontal - garage starts here
-    
-    // Room labels for Deck 2
-    { type: 'text', x: 11, y: 1, content: 'WORKSHOP', fontSize: 0.5, color: '#334155' },
-    { type: 'text', x: 15.5, y: 1, content: 'WORKSHOP', fontSize: 0.5, color: '#334155' },
-    { type: 'text', x: 11.5, y: 4.5, content: 'MASTER BED', fontSize: 0.45, color: '#334155' },
-    { type: 'text', x: 15.5, y: 4.5, content: 'EN-SUITE', fontSize: 0.45, color: '#334155' },
-    { type: 'text', x: 11.5, y: 7.5, content: 'BEDROOM 2', fontSize: 0.45, color: '#334155' },
-    { type: 'text', x: 15.5, y: 7.5, content: 'BEDROOM 3', fontSize: 0.45, color: '#334155' },
-    { type: 'text', x: 11.5, y: 10.5, content: 'BATHROOM', fontSize: 0.45, color: '#334155' },
-    { type: 'text', x: 15.5, y: 10.5, content: 'LAUNDRY', fontSize: 0.45, color: '#334155' },
-    { type: 'text', x: 11.5, y: 13.5, content: 'CUPBOARD', fontSize: 0.45, color: '#334155' },
-    { type: 'text', x: 15.5, y: 13.5, content: 'PET ROOM', fontSize: 0.45, color: '#334155' },
-    { type: 'text', x: 13.75, y: 18, content: 'HALLWAY', fontSize: 0.5, color: '#334155' },
-    { type: 'text', x: 13.75, y: 24.5, content: 'CAR GARAGE (5M)', fontSize: 0.5, color: '#334155' },
-    
-    // Doors for Deck 2
-    { type: 'door', x: 12, y: 3, w: 0.9, swing: 1 },
-    { type: 'door', x: 15, y: 3, w: 0.9, swing: 1 },
-    { type: 'door', x: 12, y: 6, w: 0.9, swing: 1 },
-    { type: 'door', x: 15, y: 9, w: 0.9, swing: 1 },
-    { type: 'door', x: 12, y: 12, w: 0.9, swing: 1 },
-    { type: 'door', x: 15, y: 12, w: 0.9, swing: 1 },
-    
-    // Stairs Deck 2 to Deck 3
-    { type: 'stairs', x: 13, y: 16, w: 1.5, L: 2.5 },
-    
-    // DECK 3: Main Living (7.5m x 22m) - shorter to leave garage space
-    { type: 'hull', x: 20, y: 0, w: 7.5, L: 22, title: 'DECK 3: MAIN LIVING', labels: [] },
-    
-    // Walls for Deck 3 - Front deck, living, kitchen, office
-    wall(20, 2, 27.5, 2), // Horizontal - front deck separation
-    wall(20, 8, 27.5, 8), // Horizontal - living room to kitchen/toilet
-    wall(23.75, 8, 23.75, 14), // Vertical - kitchen/toilet divider
-    wall(20, 14, 27.5, 14), // Horizontal - kitchen/toilet to office
-    wall(20, 18, 27.5, 18), // Horizontal - office to stairs
-    
-    // Room labels for Deck 3
-    { type: 'text', x: 22, y: 0.5, content: '1M FRONT DECK', fontSize: 0.45, color: '#334155' },
-    { type: 'text', x: 25, y: 0.5, content: '1M FRONT DECK', fontSize: 0.45, color: '#334155' },
-    { type: 'text', x: 23.75, y: 1, content: 'FRONT DOOR', fontSize: 0.5, color: '#334155' },
-    { type: 'text', x: 23.75, y: 5, content: 'LIVING ROOM', fontSize: 0.6, color: '#334155' },
-    { type: 'text', x: 21.5, y: 11, content: 'KITCHEN', fontSize: 0.5, color: '#334155' },
-    { type: 'text', x: 25.5, y: 11, content: 'TOILET', fontSize: 0.5, color: '#334155' },
-    { type: 'text', x: 23.75, y: 16, content: 'OFFICE / GAMING', fontSize: 0.5, color: '#334155' },
-    { type: 'text', x: 23.75, y: 20, content: 'STAIRS DOWN', fontSize: 0.5, color: '#334155' },
-    { type: 'text', x: 21, y: 21, content: '1M SIDE DECK', fontSize: 0.4, color: '#334155' },
-    { type: 'text', x: 26, y: 21, content: '1M SIDE DECK', fontSize: 0.4, color: '#334155' },
-    
-    // Door for Deck 3
-    { type: 'door', x: 23, y: 2, w: 1.0, swing: 1 },
-    
-    // Stairs Deck 3 down
-    { type: 'stairs', x: 23, y: 18.5, w: 1.5, L: 2.5 },
-    
-    // BRIDGE: Exactly 3.5m wide and 7m long
-    { type: 'bridge', x: 22, y: -4, w: 3.5, L: 7, title: 'BRIDGE / HELM' }
+    // Clean starting layout: three open decks and the separate bridge from the reference.
+    { type: 'hull', x: 0, y: 0, w: 7.5, L: 26, title: 'DECK 1: LOWER / MAIN DECK', labels: [] },
+    { type: 'hull', x: 8, y: 0, w: 7.5, L: 26, title: 'DECK 2: UPPER DECK', labels: [] },
+    { type: 'hull', x: 16, y: 0, w: 7.5, L: 26, title: 'DECK 3: ENGINE ROOM + MAIN STORAGE', labels: [] },
+    { type: 'text', x: 18.4, y: 7.2, content: 'ENGINE ROOM', fontSize: 0.28, color: '#64748b' },
+    { type: 'text', x: 18.4, y: 21.5, content: 'MAIN STORAGE', fontSize: 0.28, color: '#64748b' },
+    { type: 'bridge', x: 27.5, y: 2, w: 7.5, L: 11, title: 'BRIDGE + SURROUNDING DECK' }
   ],
   sel: -1, zoom: 20, ox: 50, oy: 150, mode: null, sx: 0, sy: 0,
   measureStart: null, wallStart: null, drawColor: '#ef4444', drawWidth: 0.1
@@ -230,7 +153,7 @@ function bridgeRoom(e) {
   return {x: e.x + deck, y: e.y + deck, w: e.w - deck * 2, L: e.L - deck * 2};
 }
 function dimsText(e){
-  if (e.type === 'bridge') return '(bridge ' + e.w + 'm x ' + e.L + 'm)';
+  if (e.type === 'bridge') { const r = bridgeRoom(e), fmt = v => String(Number(v.toFixed(1))); const deck = (e.w - r.w) / 2; return '(bridge ' + fmt(r.w) + 'm x ' + fmt(r.L) + 'm + ' + fmt(deck) + 'm deck)'; }
   if (e.type === 'door') return '(door width: ' + e.w + 'm)';
   if (e.type === 'stairs') return '(stairs ' + e.w + 'm x ' + e.L + 'm)';
   if (e.type === 'wall') return '(wall thickness: ' + e.thickness + 'm)';
