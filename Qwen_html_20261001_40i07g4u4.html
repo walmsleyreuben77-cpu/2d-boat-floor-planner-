@@ -114,10 +114,16 @@ let DPR = window.devicePixelRatio || 1;
 
 const state = {
   els: [
+    // DECK 1: Engine & Storage (7.5m x 27m)
     { type: 'hull', x: 0, y: 0, w: 7.5, L: 27, title: 'DECK 1: ENGINE & STORAGE', labels: [{t: 'ENGINE ROOM', fx: 0.5, fy: 0.3}, {t: 'MAIN STORAGE', fx: 0.5, fy: 0.7}] },
+    // DECK 2: Living & Garage (7.5m x 27m)
     { type: 'hull', x: 10, y: 0, w: 7.5, L: 27, title: 'DECK 2: LIVING & GARAGE', labels: [{t: 'MASTER BED', fx: 0.25, fy: 0.08}, {t: 'EN-SUITE', fx: 0.75, fy: 0.08}, {t: 'BEDROOM 2', fx: 0.25, fy: 0.20}, {t: 'BEDROOM 3', fx: 0.75, fy: 0.20}, {t: 'BATHROOM', fx: 0.25, fy: 0.32}, {t: 'LAUNDRY', fx: 0.75, fy: 0.32}, {t: 'CUPBOARD', fx: 0.25, fy: 0.45}, {t: 'PET ROOM', fx: 0.75, fy: 0.45}, {t: 'WORKSHOP', fx: 0.5, fy: 0.60}, {t: 'HALLWAY / STAIRS', fx: 0.5, fy: 0.75}, {t: 'CAR GARAGE (BACK 5M)', fx: 0.5, fy: 0.90}] },
+    // DECK 3: Main Living (7.5m x 22m)
     { type: 'hull', x: 20, y: 0, w: 7.5, L: 22, title: 'DECK 3: MAIN LIVING', labels: [{t: '1M FRONT DECK', fx: 0.5, fy: 0.05}, {t: 'FRONT DOOR', fx: 0.5, fy: 0.12}, {t: 'LIVING ROOM', fx: 0.5, fy: 0.30}, {t: 'KITCHEN', fx: 0.25, fy: 0.50}, {t: 'TOILET', fx: 0.75, fy: 0.50}, {t: 'OFFICE / GAMING', fx: 0.5, fy: 0.70}, {t: 'STAIRS DOWN', fx: 0.5, fy: 0.85}, {t: '1M SIDE DECKS', fx: 0.5, fy: 0.95}] },
+    
+    // BRIDGE: Fixed to be exactly 3.5m wide and 7m long!
     { type: 'bridge', x: 22, y: -4, w: 3.5, L: 7, title: 'BRIDGE / HELM' },
+    
     { type: 'stairs', x: 13, y: 19, w: 1.5, L: 3.0 },
     { type: 'stairs', x: 23, y: 17, w: 1.5, L: 3.0 },
     { type: 'door', x: 10, y: 5, w: 1.0, swing: 1 },
@@ -135,6 +141,7 @@ function resize(){
 }
 window.addEventListener('resize', resize);
 
+/* ---------- geometry (meters) ---------- */
 function hullPath(e){
   const w = e.w, L = e.L, bx = w/2;
   return 'M ' + bx + ' 0 C ' + (w*0.786) + ' ' + (L*0.154) + ', ' + w + ' ' + (L*0.385) + ', ' + w + ' ' + (L*0.692) +
@@ -145,6 +152,7 @@ function dPath(x, y, w, L){
   const r = w/2;
   return 'M ' + x + ' ' + (y+L) + ' L ' + x + ' ' + (y+r) + ' A ' + r + ' ' + r + ' 0 0 1 ' + (x+w) + ' ' + (y+r) + ' L ' + (x+w) + ' ' + (y+L) + ' Z';
 }
+// FIXED BRIDGE LOGIC: Dynamically scales the deck surround so small bridges don't break
 function bridgeRoom(e) {
   const deck = Math.min(2, e.w / 3, e.L / 3); 
   return {x: e.x + deck, y: e.y + deck, w: e.w - deck * 2, L: e.L - deck * 2};
@@ -157,6 +165,7 @@ function dimsText(e){
   return '(' + e.L + 'm long x ' + e.w + 'm wide)';
 }
 
+/* ---------- drawing ---------- */
 function drawGrid(w, h, s){
   ctx.strokeStyle = '#e8edf3'; ctx.lineWidth = 1;
   for (let gx = state.ox % s; gx < w; gx += s){ ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,h); ctx.stroke(); }
@@ -270,6 +279,7 @@ function draw(){
     }
   }
 
+  // Wall preview
   if (state.mode === 'place_wall' && state.wallStart) {
     const pt = toWorld(lastMouseX, lastMouseY);
     ctx.save(); ctx.translate(state.ox, state.oy); ctx.scale(state.zoom, state.zoom);
@@ -294,9 +304,11 @@ function draw(){
   }
 }
 
+/* ---------- interaction ---------- */
 let lastMouseX = 0, lastMouseY = 0;
 function toWorld(mx, my){ return [(mx - state.ox)/state.zoom, (my - state.oy)/state.zoom]; }
 
+// Math to detect if user clicked on a wall line
 function pointToSegmentDist(px, py, x1, y1, x2, y2) {
   const dx = x2 - x1, dy = y2 - y1;
   const lenSq = dx*dx + dy*dy;
@@ -434,6 +446,7 @@ cv.addEventListener('wheel', ev => {
   draw();
 }, {passive: false});
 
+/* ---------- panel ---------- */
 const $ = id => document.getElementById(id);
 function syncPanel(){
   const e = state.els[state.sel];
@@ -499,6 +512,7 @@ function fit(){
   draw();
 }
 
+/* ---------- save / load ---------- */
 function download(name, url){ const a = document.createElement('a'); a.href = url; a.download = name; a.click(); }
 $('bSave').onclick = () => { download('boat_plan.json', URL.createObjectURL(new Blob([JSON.stringify(state.els, null, 2)], {type: 'application/json'}))); };
 $('bLoad').onclick = () => $('fileInput').click();
@@ -509,6 +523,7 @@ $('fileInput').onchange = (ev) => {
   reader.readAsText(file);
 };
 
+/* ---------- export ---------- */
 $('bPng').onclick = () => {
   const b = bounds(), m = 1, s = 200;
   const c2 = document.createElement('canvas');
