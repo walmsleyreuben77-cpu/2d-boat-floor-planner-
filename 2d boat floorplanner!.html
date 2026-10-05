@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>2D Boat Floorplanner!</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #panel { width: 280px; min-width: 280px; background: #0f172a; color: #e2e8f0; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  #panel h1 { font-size: 16px; margin-bottom: 8px; color: #fff; }
+  .grp { margin-bottom: 8px; }
+  .grp label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px; }
+  .grp input[type="text"], .grp input[type="number"] { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 13px; }
+  .grp input[type="color"] { width: 40px; height: 32px; padding: 0; border: 1px solid #334155; border-radius: 6px; background: #1e293b; cursor: pointer; }
+  button { width: 100%; padding: 8px; margin-top: 4px; border: 0; border-radius: 6px; background: #2563eb; color: #fff; font-size: 13px; cursor: pointer; transition: background 0.2s; }
+  button:hover { background: #1d4ed8; }
+  button.alt { background: #334155; }
+  button.alt:hover { background: #475569; }
+  button.warn { background: #b91c1c; }
+  button.warn:hover { background: #991b1b; }
+  button.tool { background: #059669; }
+  button.tool:hover { background: #047857; }
+  button.tool.eraser { background: #ea580c; }
+  button.tool.eraser:hover { background: #c2410c; }
+  button.tool.select { background: #475569; }
+  button.tool.select:hover { background: #64748b; }
+  .hint { font-size: 11px; color: #64748b; line-height: 1.5; margin-top: 8px; border-top: 1px solid #334155; padding-top: 8px; }
+  #cv { flex: 1; cursor: grab; display: block; background: #ffffff; }
+  #cv.dragging { cursor: grabbing; }
+  #cv.handle { cursor: nwse-resize; }
+  #cv.crosshair { cursor: crosshair; }
+  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-top: 8px; margin-bottom: 4px; font-weight: bold; }
+  .row { display: flex; gap: 8px; align-items: center; }
+</style>
+<base target="_blank">
+</head>
+<body>
+<div id="panel">
+  <h1>🚤 2D Boat Floorplanner!</h1>
+  
+  <div class="section-title">Project</div>
+  <div class="grp">
+    <button id="bNew" class="alt">📄 New Project</button>
+    <button id="bSave" class="alt">💾 Save Project (.json)</button>
+    <button id="bLoad" class="alt">📂 Load Project (.json)</button>
+    <input type="file" id="fileInput" accept=".json" style="display:none">
+  </div>
+
+  <div class="section-title">Properties</div>
+  <div class="grp"><label>Name / Title</label><input id="pName" type="text"></div>
+  <div class="grp" id="grpDims"><label>Width (m)</label><input id="pW" type="number" step="0.1" min="0.5"></div>
+  <div class="grp" id="grpDims2"><label>Length (m)</label><input id="pL" type="number" step="0.1" min="0.5"></div>
+  <div class="grp" id="grpText" style="display:none;"><label>Text Content</label><input id="pText" type="text"></div>
+  <div class="grp" id="grpDoor" style="display:none;"><label>Door Width (m)</label><input id="pDoorW" type="number" step="0.1" min="0.3"></div>
+  <div class="grp" id="grpWall" style="display:none;"><label>Wall Thickness (m)</label><input id="pWallT" type="number" step="0.05" min="0.05" value="0.15"></div>
+  <div class="grp">
+    <button id="bDel" class="warn">🗑️ Delete Selected</button>
+  </div>
+
+  <div class="section-title">Add Shapes</div>
+  <div class="grp">
+    <button id="bAddHull">+ Add Deck (Hull)</button>
+    <button id="bAddBridge" class="alt">+ Add Bridge Block</button>
+  </div>
+
+  <div class="section-title">Tools</div>
+  <div class="grp">
+    <button id="bSelect" class="tool select">🖱️ Select / Move</button>
+    <button id="bDraw" class="tool">🖊️ Freehand Draw</button>
+    <button id="bErase" class="tool eraser">🧽 Eraser (Rubber)</button>
+    <button id="bWall" class="tool">🧱 Add Wall</button>
+  </div>
+  
+  <div class="grp" id="drawControls" style="display:none; background:#1e293b; padding:8px; border-radius:6px;">
+    <label style="margin-bottom:6px;">Drawing Settings</label>
+    <div class="row">
+      <input id="drawColor" type="color" value="#ef4444" title="Choose Color">
+      <label style="margin:0; flex:1;">Line Width (m)</label>
+      <input id="drawWidth" type="number" step="0.05" min="0.05" max="0.5" value="0.1" style="width:60px;">
+    </div>
+  </div>
+
+  <div class="grp">
+    <button id="bMeasure" class="tool">📏 Tape Measurer</button>
+    <button id="bText" class="tool">🔤 Add Text Label</button>
+    <button id="bDoor" class="tool">🚪 Add Door</button>
+    <button id="bStairs" class="tool">🪜 Add Stairs</button>
+  </div>
+
+  <div class="section-title">View & Export</div>
+  <div class="grp">
+    <button id="bFit" class="alt">Fit View</button>
+    <div style="display:flex; gap:4px;">
+      <button id="bZoomIn" class="alt" style="flex:1;">Zoom +</button>
+      <button id="bZoomOut" class="alt" style="flex:1;">Zoom −</button>
+    </div>
+  </div>
+  <div class="grp">
+    <button id="bPng">⬇ Export PNG (Opens in Paint)</button>
+    <button id="bSvg" class="alt">⬇ Export SVG (Vector)</button>
+  </div>
+
+  <div class="hint">
+    <b>Walls:</b> Click once to start, then click again to finish a wall.<br>
+    <b>Select Mode:</b> Click to select, drag to move. Drag ● handle to resize.<br>
+    <b>Draw Mode:</b> Click and drag to sketch. Use the Eraser to fix mistakes.<br>
+    <b>Pan/Zoom:</b> Right-click drag to pan. Mouse wheel to zoom.<br>
+    Exported PNG is exactly 200px per meter.
+  </div>
+</div>
+<canvas id="cv"></canvas>
+
+<script>
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let DPR = window.devicePixelRatio || 1;
+
+const state = {
+  els: [
+    {type:'hull', x:0, y:0, w:7.5, L:26, title:'DECK 1: LOWER / MAIN DECK', labels:[]},
+    {type:'hull', x:8, y:0, w:7.5, L:26, title:'DECK 2: UPPER DECK', labels:[]},
+    {type:'hull', x:16, y:0, w:7.5, L:26, title:'DECK 3: ENGINE ROOM + MAIN STORAGE', labels:[{t:'ENGINE ROOM', fx:0.5, fy:0.27},{t:'MAIN STORAGE', fx:0.5, fy:0.85}]},
+    {type:'bridge', x:27.5, y:2, w:7.5, L:11, title:'BRIDGE + SURROUNDING DECK'},
+  ],
+  sel: -1, zoom: 34, ox: 30, oy: 80, mode: null, sx: 0, sy: 0,
+  measureStart: null, wallStart: null, drawColor: '#ef4444', drawWidth: 0.1
+};
+
+function wall(x1, y1, x2, y2, thickness = 0.15) {
+  return {type:'wall', x1, y1, x2, y2, thickness, color:'#0f172a'};
+}
+function drawWallOn(c, e, s, ox, oy, selected = false) {
+  c.save(); c.translate(ox, oy); c.scale(s, s);
+  c.strokeStyle = selected ? '#2563eb' : (e.color || '#0f172a');
+  c.lineWidth = selected ? Math.max(e.thickness, 0.08) : e.thickness;
+  c.lineCap = 'square';
+  if (selected) c.setLineDash([0.2, 0.12]);
+  c.beginPath(); c.moveTo(e.x1, e.y1); c.lineTo(e.x2, e.y2); c.stroke();
+  c.setLineDash([]); c.restore();
+}
+
+function resize(){
+  DPR = window.devicePixelRatio || 1;
+  cv.width = cv.clientWidth * DPR; cv.height = cv.clientHeight * DPR;
+  draw();
+}
+window.addEventListener('resize', resize);
+
+/* ---------- geometry (meters) ---------- */
+function hullPath(e){
+  const w = e.w, L = e.L, bx = w/2;
+  return 'M ' + bx + ' 0 C ' + (w*0.786) + ' ' + (L*0.154) + ', ' + w + ' ' + (L*0.385) + ', ' + w + ' ' + (L*0.692) +
+         ' L ' + w + ' ' + (L*0.962) + ' Q ' + w + ' ' + L + ', ' + (w*0.857) + ' ' + L + ' L ' + (w*0.143) + ' ' + L +
+         ' Q 0 ' + L + ', 0 ' + (L*0.962) + ' L 0 ' + (L*0.692) + ' C 0 ' + (L*0.385) + ', ' + (w*0.214) + ' ' + (L*0.154) + ', ' + bx + ' 0 Z';
+}
+function dPath(x, y, w, L){
+  const r = w/2;
+  return 'M ' + x + ' ' + (y+L) + ' L ' + x + ' ' + (y+r) + ' A ' + r + ' ' + r + ' 0 0 1 ' + (x+w) + ' ' + (y+r) + ' L ' + (x+w) + ' ' + (y+L) + ' Z';
+}
+function bridgeRoom(e){ return {x:e.x+2, y:e.y+2, w:e.w-4, L:e.L-4}; }
+function dimsText(e){
+  if (e.type === 'bridge') return '(bridge ' + (e.w-4) + 'm x ' + (e.L-4) + 'm + 2m deck)';
+  if (e.type === 'door') return '(door width: ' + e.w + 'm)';
+  if (e.type === 'wall') return '(wall thickness: ' + e.thickness + 'm)';
+  if (e.type === 'stairs') return '(stairs ' + e.w + 'm x ' + e.L + 'm)';
+  return '(' + e.L + 'm long x ' + e.w + 'm wide)';
+}
+
+/* ---------- drawing ---------- */
+function drawGrid(w, h, s){
+  ctx.strokeStyle = '#e8edf3'; ctx.lineWidth = 1;
+  for (let gx = state.ox % s; gx < w; gx += s){ ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,h); ctx.stroke(); }
+  for (let gy = state.oy % s; gy < h; gy += s){ ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(w,gy); ctx.stroke(); }
+}
+
+function drawElementOn(c, e, s, ox, oy, withTitles){
+  c.save(); c.translate(ox + e.x*s, oy + e.y*s); c.scale(s, s);
+  
+  if (e.type === 'hull'){
+    c.fillStyle = '#f8fafc'; c.strokeStyle = '#0f172a'; c.lineWidth = 6/s;
+    const p = new Path2D(hullPath(e)); c.fill(p); c.stroke(p);
+    c.strokeStyle = '#cbd5e1'; c.lineWidth = 2/s; c.setLineDash([6/s, 6/s]);
+    c.beginPath(); c.moveTo(e.w/2, 0); c.lineTo(e.w/2, e.L);
+    c.moveTo(0, e.L/2); c.lineTo(e.w, e.L/2); c.stroke(); c.setLineDash([]);
+    (e.labels || []).forEach(lb => { c.fillStyle = '#64748b'; c.font = '0.30px sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(lb.t, e.w*lb.fx, e.L*lb.fy); });
+  } else if (e.type === 'bridge') {
+    const r = bridgeRoom(e);
+    c.fillStyle = '#e2e8f0'; c.strokeStyle = '#94a3b8'; c.lineWidth = 3/s;
+    let p = new Path2D(dPath(0, 0, e.w, e.L)); c.fill(p); c.stroke(p);
+    c.fillStyle = '#f8fafc'; c.strokeStyle = '#0f172a'; c.lineWidth = 6/s;
+    p = new Path2D(dPath(r.x-e.x, r.y-e.y, r.w, r.L)); c.fill(p); c.stroke(p);
+    c.fillStyle = '#64748b'; c.font = '0.30px sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('BRIDGE', r.x-e.x + r.w/2, (r.y-e.y) + (r.L - r.w/2)/2 + r.w/2);
+  } else if (e.type === 'text') {
+    c.fillStyle = e.color || '#0f172a';
+    c.font = (e.fontSize || 0.5) + 'px sans-serif';
+    c.textAlign = 'left'; c.textBaseline = 'top';
+    c.fillText(e.content, 0, 0);
+  } else if (e.type === 'door') {
+    c.strokeStyle = '#0f172a'; c.lineWidth = 3/s;
+    c.beginPath(); c.moveTo(0, 0); c.lineTo(e.w, 0); c.stroke();
+    const endY = e.w * (e.swing < 0 ? -1 : 1);
+    c.beginPath(); c.arc(0, 0, e.w, 0, (Math.PI/2) * (e.swing < 0 ? -1 : 1), e.swing < 0); c.stroke();
+  } else if (e.type === 'stairs') {
+    // Draw stairs as a rectangle with parallel lines
+    c.strokeStyle = '#0f172a'; c.lineWidth = 3/s;
+    c.strokeRect(0, 0, e.w, e.L);
+    
+    // Calculate number of steps (aim for ~0.25m per step)
+    const numSteps = Math.max(2, Math.round(e.L / 0.25));
+    const stepHeight = e.L / numSteps;
+    
+    c.lineWidth = 1.5/s;
+    for (let i = 1; i < numSteps; i++) {
+      const y = i * stepHeight;
+      c.beginPath();
+      c.moveTo(0, y);
+      c.lineTo(e.w, y);
+      c.stroke();
+    }
+    
+    // Draw arrow to show direction
+    c.fillStyle = '#0f172a';
+    c.beginPath();
+    c.moveTo(e.w/2, e.L * 0.9);
+    c.lineTo(e.w/2 - 0.15, e.L * 0.8);
+    c.lineTo(e.w/2 + 0.15, e.L * 0.8);
+    c.closePath();
+    c.fill();
+  }
+  c.restore();
+
+  if (withTitles && (e.type === 'hull' || e.type === 'bridge')){
+    c.fillStyle = '#334155'; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+    c.font = 'bold ' + Math.max(0.36*s, 8) + 'px sans-serif';
+    c.fillText(e.title, ox + (e.x + e.w/2)*s, oy + e.y*s - 0.48*s);
+    c.font = Math.max(0.30*s, 8) + 'px sans-serif';
+    c.fillText(dimsText(e), ox + (e.x + e.w/2)*s, oy + e.y*s - 0.14*s);
+  }
+}
+
+function draw(){
+  const w = cv.width/DPR, h = cv.height/DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+  drawGrid(w, h, state.zoom);
+  
+  state.els.forEach(e => {
+    if (e.type === 'draw') {
+      ctx.save(); ctx.translate(state.ox, state.oy); ctx.scale(state.zoom, state.zoom);
+      ctx.strokeStyle = e.color || '#ef4444'; ctx.lineWidth = (e.width || 0.1);
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      e.points.forEach((p, i) => { i===0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
+      ctx.stroke(); ctx.restore();
+    } else if (e.type === 'measure') {
+      ctx.save(); ctx.translate(state.ox, state.oy); ctx.scale(state.zoom, state.zoom);
+      ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2/state.zoom;
+      ctx.setLineDash([4/state.zoom, 4/state.zoom]);
+      ctx.beginPath(); ctx.moveTo(e.x1, e.y1); ctx.lineTo(e.x2, e.y2); ctx.stroke();
+      ctx.setLineDash([]);
+      const dist = Math.hypot(e.x2 - e.x1, e.y2 - e.y1).toFixed(2);
+      ctx.fillStyle = '#10b981'; ctx.font = '0.4px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText(dist + 'm', (e.x1 + e.x2)/2, (e.y1 + e.y2)/2 - 0.1);
+      ctx.restore();
+    } else if (e.type === 'wall') {
+      drawWallOn(ctx, e, state.zoom, state.ox, state.oy);
+    } else {
+      drawElementOn(ctx, e, state.zoom, state.ox, state.oy, true);
+    }
+  });
+
+  const sel = state.els[state.sel];
+  if (sel && sel.type === 'wall') {
+    drawWallOn(ctx, sel, state.zoom, state.ox, state.oy, true);
+    const hx = state.ox + sel.x2*state.zoom, hy = state.oy + sel.y2*state.zoom;
+    ctx.fillStyle = '#2563eb'; ctx.beginPath(); ctx.arc(hx, hy, 6, 0, Math.PI*2); ctx.fill();
+  } else if (sel && sel.type !== 'draw' && sel.type !== 'measure'){
+    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+    ctx.strokeRect(state.ox + sel.x*state.zoom, state.oy + sel.y*state.zoom, (sel.w||1)*state.zoom, (sel.L||1)*state.zoom);
+    ctx.setLineDash([]);
+    const hx = state.ox + (sel.x + (sel.w||1))*state.zoom, hy = state.oy + (sel.y + (sel.L||1))*state.zoom;
+    ctx.fillStyle = '#2563eb'; ctx.beginPath(); ctx.arc(hx, hy, 6, 0, Math.PI*2); ctx.fill();
+  }
+
+  if (state.mode === 'place_wall' && state.wallStart) {
+    const pt = toWorld(lastMouseX, lastMouseY);
+    drawWallOn(ctx, {x1:state.wallStart.x, y1:state.wallStart.y, x2:pt[0], y2:pt[1], thickness:0.15, color:'#64748b'}, state.zoom, state.ox, state.oy, true);
+  }
+
+  if (state.mode === 'measuring' && state.measureStart) {
+    const pt = toWorld(lastMouseX, lastMouseY);
+    ctx.save(); ctx.translate(state.ox, state.oy); ctx.scale(state.zoom, state.zoom);
+    ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2/state.zoom;
+    ctx.setLineDash([4/state.zoom, 4/state.zoom]);
+    ctx.beginPath(); ctx.moveTo(state.measureStart.x, state.measureStart.y); ctx.lineTo(pt[0], pt[1]); ctx.stroke();
+    ctx.setLineDash([]);
+    const dist = Math.hypot(pt[0] - state.measureStart.x, pt[1] - state.measureStart.y).toFixed(2);
+    ctx.fillStyle = '#10b981'; ctx.font = '0.4px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText(dist + 'm', (state.measureStart.x + pt[0])/2, (state.measureStart.y + pt[1])/2 - 0.1);
+    ctx.restore();
+  }
+}
+
+/* ---------- interaction ---------- */
+let lastMouseX = 0, lastMouseY = 0;
+function toWorld(mx, my){ return [(mx - state.ox)/state.zoom, (my - state.oy)/state.zoom]; }
+function pointToSegmentDist(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1, lenSq = dx*dx + dy*dy;
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+  const t = Math.max(0, Math.min(1, ((px - x1)*dx + (py - y1)*dy) / lenSq));
+  return Math.hypot(px - (x1 + t*dx), py - (y1 + t*dy));
+}
+function hit(mx, my){
+  for (let i = state.els.length - 1; i >= 0; i--){
+    const e = state.els[i];
+    if (e.type === 'draw' || e.type === 'measure') continue;
+    if (e.type === 'wall') {
+      if (pointToSegmentDist(mx, my, e.x1, e.y1, e.x2, e.y2) < (e.thickness/2 + 0.2)) return i;
+    } else if (mx >= e.x && mx <= e.x + (e.w||1) && my >= e.y && my <= e.y + (e.L||1)) return i;
+  }
+  return -1;
+}
+function snap(v){ return Math.round(v*4)/4; }
+
+cv.addEventListener('mousedown', ev => {
+  const pt = toWorld(ev.offsetX, ev.offsetY), mx = pt[0], my = pt[1];
+  lastMouseX = ev.offsetX; lastMouseY = ev.offsetY;
+  
+  if (state.mode === 'place_wall') {
+    if (!state.wallStart) {
+      state.wallStart = {x: mx, y: my};
+    } else {
+      if (Math.hypot(mx - state.wallStart.x, my - state.wallStart.y) > 0.05) {
+        state.els.push(wall(snap(state.wallStart.x), snap(state.wallStart.y), snap(mx), snap(my)));
+        state.sel = state.els.length - 1;
+      }
+      state.wallStart = null;
+      state.mode = null;
+      cv.classList.remove('crosshair');
+      syncPanel();
+    }
+    draw();
+    return;
+  }
+
+  if (state.mode === 'draw') {
+    state.els.push({type: 'draw', points: [{x: mx, y: my}], color: state.drawColor, width: state.drawWidth});
+    state.sel = state.els.length - 1;
+    state.mode = 'drawing';
+  } else if (state.mode === 'erase') {
+    state.els.push({type: 'draw', points: [{x: mx, y: my}], color: '#ffffff', width: state.drawWidth * 4});
+    state.sel = state.els.length - 1;
+    state.mode = 'erasing';
+  } else if (state.mode === 'measure') {
+    state.measureStart = {x: mx, y: my};
+    state.mode = 'measuring';
+  } else if (state.mode === 'place_text') {
+    const content = prompt("Enter text label:", "New Area");
+    if (content) {
+      state.els.push({type: 'text', x: mx, y: my, content: content, fontSize: 0.5, color: '#0f172a'});
+      state.mode = null; cv.classList.remove('crosshair');
+    }
+  } else if (state.mode === 'place_door') {
+    state.els.push({type: 'door', x: mx, y: my, w: 0.8, swing: 1});
+    state.mode = null; cv.classList.remove('crosshair');
+  } else if (state.mode === 'place_stairs') {
+    state.els.push({type: 'stairs', x: mx, y: my, w: 1.0, L: 2.0});
+    state.sel = state.els.length - 1;
+    state.mode = null; cv.classList.remove('crosshair');
+    syncPanel();
+  } else {
+    const sel = state.els[state.sel];
+    const wallHandle = sel && sel.type === 'wall' && Math.abs(mx - sel.x2) < 8/state.zoom && Math.abs(my - sel.y2) < 8/state.zoom;
+    const shapeHandle = sel && sel.type !== 'wall' && Math.abs(mx - (sel.x + (sel.w||1))) < 8/state.zoom && Math.abs(my - (sel.y + (sel.L||1))) < 8/state.zoom;
+    if (wallHandle || shapeHandle){
+      state.mode = 'resize'; cv.classList.add('handle');
+    } else {
+      const i = hit(mx, my);
+      if (i >= 0){ state.sel = i; state.mode = 'drag'; cv.classList.add('dragging'); }
+      else { state.sel = -1; state.mode = 'pan'; cv.classList.add('dragging'); }
+    }
+  }
+  state.sx = mx; state.sy = my; syncPanel(); draw();
+});
+
+window.addEventListener('mousemove', ev => {
+  lastMouseX = ev.offsetX; lastMouseY = ev.offsetY;
+  if (!state.mode) return;
+  const pt = toWorld(ev.offsetX, ev.offsetY), mx = pt[0], my = pt[1];
+  const dx = mx - state.sx, dy = my - state.sy;
+  
+  if (state.mode === 'drag'){
+    const e = state.els[state.sel];
+    if (e.type === 'wall') {
+      e.x1 = snap(e.x1 + dx); e.y1 = snap(e.y1 + dy);
+      e.x2 = snap(e.x2 + dx); e.y2 = snap(e.y2 + dy);
+    } else { e.x = snap(e.x + dx); e.y = snap(e.y + dy); }
+    draw();
+  } else if (state.mode === 'resize'){
+    const e = state.els[state.sel];
+    if (e.type === 'wall') { e.x2 = snap(e.x2 + dx); e.y2 = snap(e.y2 + dy); }
+    else {
+      e.w = Math.max(0.5, snap((e.w||1) + dx)); e.L = Math.max(0.5, snap((e.L||1) + dy));
+      if (e.type === 'bridge'){ e.w = Math.max(6, e.w); e.L = Math.max(6, e.L); }
+    }
+    draw();
+  } else if (state.mode === 'drawing' || state.mode === 'erasing'){
+    const e = state.els[state.sel];
+    const last = e.points[e.points.length - 1];
+    if (Math.hypot(mx - last.x, my - last.y) > 0.05) {
+      e.points.push({x: mx, y: my});
+      
+      // 🚀 FAST PATH: Draw ONLY the new line segment directly to the canvas
+      ctx.save();
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.translate(state.ox * DPR, state.oy * DPR);
+      ctx.scale(state.zoom * DPR, state.zoom * DPR);
+      ctx.strokeStyle = e.color;
+      ctx.lineWidth = e.width;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+      ctx.lineTo(mx, my);
+      ctx.stroke();
+      ctx.restore();
+    }
+  } else if (state.mode === 'measuring' || state.mode === 'pan' || state.mode === 'place_wall') {
+    if (state.mode === 'pan') { state.ox += ev.movementX; state.oy += ev.movementY; }
+    draw();
+  }
+  state.sx = mx; state.sy = my; 
+});
+
+window.addEventListener('mouseup', () => {
+  if (state.mode === 'drawing' || state.mode === 'erasing') { 
+    state.mode = (state.mode === 'drawing') ? 'draw' : 'erase'; 
+  } else if (state.mode === 'measuring') {
+    const pt = toWorld(lastMouseX, lastMouseY);
+    state.els.push({type: 'measure', x1: state.measureStart.x, y1: state.measureStart.y, x2: pt[0], y2: pt[1]});
+    state.mode = null; cv.classList.remove('crosshair');
+  } else if (state.mode === 'place_wall') {
+    // Keep the tool active after its first click so the second click can finish the wall.
+  } else {
+    state.mode = null; 
+  }
+  cv.classList.remove('dragging', 'handle');
+  syncPanel(); 
+  draw(); 
+});
+
+cv.addEventListener('wheel', ev => {
+  ev.preventDefault();
+  const f = ev.deltaY < 0 ? 1.15 : 1/1.15;
+  const mx = ev.offsetX, my = ev.offsetY;
+  state.ox = mx - (mx - state.ox)*f; state.oy = my - (my - state.oy)*f;
+  state.zoom = Math.min(200, Math.max(4, state.zoom*f));
+  draw();
+}, {passive: false});
+
+/* ---------- panel ---------- */
+const $ = id => document.getElementById(id);
+function syncPanel(){
+  const e = state.els[state.sel];
+  $('grpDims').style.display = 'none'; $('grpDims2').style.display = 'none';
+  $('grpText').style.display = 'none'; $('grpDoor').style.display = 'none'; $('grpWall').style.display = 'none';
+  
+  if (!e) { $('pName').value = ''; return; }
+  
+  $('pName').value = e.title || e.content || '';
+  if (e.type === 'hull' || e.type === 'bridge' || e.type === 'stairs') {
+    $('grpDims').style.display = 'block'; $('grpDims2').style.display = 'block';
+    $('pW').value = e.type === 'bridge' ? e.w - 4 : e.w;
+    $('pL').value = e.type === 'bridge' ? e.L - 4 : e.L;
+  } else if (e.type === 'text') {
+    $('grpText').style.display = 'block';
+    $('pText').value = e.content;
+  } else if (e.type === 'door') {
+    $('grpDoor').style.display = 'block';
+    $('pDoorW').value = e.w;
+  } else if (e.type === 'wall') {
+    $('grpWall').style.display = 'block';
+    $('pWallT').value = e.thickness;
+  }
+}
+
+$('pName').addEventListener('input', () => { const e = state.els[state.sel]; if (e){ e.title = $('pName').value; e.content = $('pName').value; draw(); } });
+$('pW').addEventListener('input', () => { const e = state.els[state.sel]; if (!e) return; e.w = Math.max(0.5, parseFloat($('pW').value) || 0.5); if (e.type === 'bridge') e.w += 4; draw(); });
+$('pL').addEventListener('input', () => { const e = state.els[state.sel]; if (!e) return; e.L = Math.max(0.5, parseFloat($('pL').value) || 0.5); if (e.type === 'bridge') e.L += 4; draw(); });
+$('pText').addEventListener('input', () => { const e = state.els[state.sel]; if (e && e.type === 'text'){ e.content = $('pText').value; draw(); } });
+$('pDoorW').addEventListener('input', () => { const e = state.els[state.sel]; if (e && e.type === 'door'){ e.w = Math.max(0.3, parseFloat($('pDoorW').value) || 0.3); draw(); } });
+$('pWallT').addEventListener('input', () => { const e = state.els[state.sel]; if (e && e.type === 'wall'){ e.thickness = Math.max(0.05, parseFloat($('pWallT').value) || 0.15); draw(); } });
+
+$('drawColor').addEventListener('input', (e) => { state.drawColor = e.target.value; });
+$('drawWidth').addEventListener('input', (e) => { state.drawWidth = Math.max(0.05, parseFloat(e.target.value) || 0.1); });
+
+$('bAddHull').onclick = () => { 
+  state.els.push({type:'hull', x:2, y:2, w:7.5, L:26, title:'NEW DECK', labels:[]}); 
+  state.sel = state.els.length - 1; 
+  syncPanel(); 
+  draw(); 
+};
+$('bAddBridge').onclick = () => { 
+  state.els.push({type:'bridge', x:2, y:2, w:7.5, L:11, title:'NEW BRIDGE'}); 
+  state.sel = state.els.length - 1; 
+  syncPanel(); 
+  draw(); 
+};
+
+$('bNew').onclick = () => { if(confirm("Start new project? Unsaved changes will be lost.")) { state.els = []; state.sel = -1; state.wallStart = null; state.mode = null; state.zoom = 34; state.ox = 30; state.oy = 80; cv.classList.remove('crosshair'); syncPanel(); draw(); } };
+$('bSelect').onclick = () => { state.mode = null; state.wallStart = null; cv.classList.remove('crosshair'); $('drawControls').style.display = 'none'; draw(); };
+$('bDraw').onclick = () => { state.mode = 'draw'; state.wallStart = null; cv.classList.add('crosshair'); $('drawControls').style.display = 'block'; };
+$('bErase').onclick = () => { state.mode = 'erase'; state.wallStart = null; cv.classList.add('crosshair'); $('drawControls').style.display = 'none'; };
+$('bWall').onclick = () => { state.mode = 'place_wall'; state.wallStart = null; cv.classList.add('crosshair'); $('drawControls').style.display = 'none'; draw(); };
+$('bMeasure').onclick = () => { state.mode = 'measure'; state.wallStart = null; cv.classList.add('crosshair'); };
+$('bText').onclick = () => { state.mode = 'place_text'; state.wallStart = null; cv.classList.add('crosshair'); };
+$('bDoor').onclick = () => { state.mode = 'place_door'; state.wallStart = null; cv.classList.add('crosshair'); };
+$('bStairs').onclick = () => { state.mode = 'place_stairs'; state.wallStart = null; cv.classList.add('crosshair'); };
+$('bDel').onclick = () => { if (state.sel >= 0){ state.els.splice(state.sel, 1); state.sel = -1; syncPanel(); draw(); } };
+$('bFit').onclick = fit;
+$('bZoomIn').onclick = () => { state.zoom = Math.min(200, state.zoom*1.3); draw(); };
+$('bZoomOut').onclick = () => { state.zoom = Math.max(4, state.zoom/1.3); draw(); };
+
+function bounds(){
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  state.els.forEach(e => { 
+    if(e.type === 'draw') { e.points.forEach(p => { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }); }
+    else if(e.type === 'measure' || e.type === 'wall') { x0 = Math.min(x0, e.x1, e.x2); y0 = Math.min(y0, e.y1, e.y2); x1 = Math.max(x1, e.x1, e.x2); y1 = Math.max(y1, e.y1, e.y2); }
+    else { x0 = Math.min(x0, e.x); y0 = Math.min(y0, e.y); x1 = Math.max(x1, e.x + (e.w||1)); y1 = Math.max(y1, e.y + (e.L||1)); }
+  });
+  return {x0: x0 === 1e9 ? 0 : x0, y0: y0 === 1e9 ? 0 : y0, x1: x1 === -1e9 ? 10 : x1, y1: y1 === -1e9 ? 10 : y1};
+}
+function fit(){
+  const b = bounds(), w = cv.clientWidth, h = cv.clientHeight;
+  state.zoom = Math.max(4, Math.min((w - 80)/((b.x1 - b.x0) || 1), (h - 80)/((b.y1 - b.y0) || 1)));
+  state.ox = (w - (b.x1 - b.x0)*state.zoom)/2 - b.x0*state.zoom;
+  state.oy = (h - (b.y1 - b.y0)*state.zoom)/2 - b.y0*state.zoom;
+  draw();
+}
+
+/* ---------- save / load ---------- */
+function download(name, url){ const a = document.createElement('a'); a.href = url; a.download = name; a.click(); }
+$('bSave').onclick = () => { download('boat_plan.json', URL.createObjectURL(new Blob([JSON.stringify(state.els, null, 2)], {type: 'application/json'}))); };
+$('bLoad').onclick = () => $('fileInput').click();
+$('fileInput').onchange = (ev) => {
+  const file = ev.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => { try { state.els = JSON.parse(e.target.result); state.sel = -1; syncPanel(); fit(); draw(); } catch(err) { alert("Invalid JSON file"); } };
+  reader.readAsText(file);
+};
+
+/* ---------- export ---------- */
+$('bPng').onclick = () => {
+  const b = bounds(), m = 1, s = 200;
+  const c2 = document.createElement('canvas');
+  c2.width = Math.round((b.x1 - b.x0 + 2*m)*s); c2.height = Math.round((b.y1 - b.y0 + 2*m)*s);
+  const c = c2.getContext('2d');
+  c.fillStyle = '#fff'; c.fillRect(0, 0, c2.width, c2.height);
+  state.els.forEach(e => {
+    if (e.type === 'draw') {
+      c.save(); c.translate((m - b.x0)*s, (m - b.y0)*s); c.scale(s, s);
+      c.strokeStyle = e.color || '#ef4444'; c.lineWidth = (e.width || 0.1); c.lineCap = 'round'; c.lineJoin = 'round';
+      c.beginPath(); e.points.forEach((p, i) => { i===0 ? c.moveTo(p.x, p.y) : c.lineTo(p.x, p.y); }); c.stroke(); c.restore();
+    } else if (e.type === 'wall') {
+      drawWallOn(c, e, s, m - b.x0, m - b.y0);
+    } else { drawElementOn(c, e, s, m - b.x0, m - b.y0, true); }
+  });
+  download('boat_plan.png', c2.toDataURL('image/png'));
+};
+
+$('bSvg').onclick = () => {
+  const b = bounds(), m = 1, s = 100;
+  const X = v => (v - b.x0 + m)*s, Y = v => (v - b.y0 + m)*s;
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const W = (b.x1 - b.x0 + 2*m)*s, H = (b.y1 - b.y0 + 2*m)*s;
+  const parts = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">', '<rect width="100%" height="100%" fill="#ffffff"/>'];
+  
+  state.els.forEach(e => {
+    if (e.type === 'draw') {
+      const pts = e.points.map(p => `${X(p.x)},${Y(p.y)}`).join(' ');
+      parts.push(`<polyline points="${pts}" fill="none" stroke="${e.color || '#ef4444'}" stroke-width="${(e.width||0.1)*s}" stroke-linecap="round" stroke-linejoin="round"/>`);
+    } else if (e.type === 'measure') {
+      parts.push(`<line x1="${X(e.x1)}" y1="${Y(e.y1)}" x2="${X(e.x2)}" y2="${Y(e.y2)}" stroke="#10b981" stroke-width="2" stroke-dasharray="4 4"/>`);
+      const dist = Math.hypot(e.x2 - e.x1, e.y2 - e.y1).toFixed(2);
+      parts.push(`<text x="${(X(e.x1)+X(e.x2))/2}" y="${(Y(e.y1)+Y(e.y2))/2 - 5}" font-family="sans-serif" font-size="14" fill="#10b981" text-anchor="middle">${dist}m</text>`);
+    } else if (e.type === 'wall') {
+      parts.push(`<line x1="${X(e.x1)}" y1="${Y(e.y1)}" x2="${X(e.x2)}" y2="${Y(e.y2)}" stroke="${e.color || '#0f172a'}" stroke-width="${e.thickness*s}" stroke-linecap="square"/>`);
+    } else {
+      const tx = X(e.x), ty = Y(e.y);
+      parts.push('<g transform="translate(' + tx + ',' + ty + ') scale(' + s + ')">');
+      if (e.type === 'hull'){
+        parts.push('<path d="' + hullPath(e) + '" fill="#f8fafc" stroke="#0f172a" stroke-width="0.06"/>');
+        parts.push('<line x1="' + e.w/2 + '" y1="0" x2="' + e.w/2 + '" y2="' + e.L + '" stroke="#cbd5e1" stroke-width="0.02" stroke-dasharray="0.06 0.06"/>');
+        parts.push('<line x1="0" y1="' + e.L/2 + '" x2="' + e.w + '" y2="' + e.L/2 + '" stroke="#cbd5e1" stroke-width="0.02" stroke-dasharray="0.06 0.06"/>');
+        (e.labels || []).forEach(lb => parts.push('<text x="' + e.w*lb.fx + '" y="' + e.L*lb.fy + '" font-family="sans-serif" font-size="0.30" fill="#64748b" text-anchor="middle">' + esc(lb.t) + '</text>'));
+      } else if (e.type === 'bridge') {
+        const r = bridgeRoom(e);
+        parts.push('<path d="' + dPath(0, 0, e.w, e.L) + '" fill="#e2e8f0" stroke="#94a3b8" stroke-width="0.03"/>');
+        parts.push('<path d="' + dPath(r.x - e.x, r.y - e.y, r.w, r.L) + '" fill="#f8fafc" stroke="#0f172a" stroke-width="0.06"/>');
+        parts.push('<text x="' + (r.x - e.x + r.w/2) + '" y="' + ((r.y - e.y) + (r.L - r.w/2)/2 + r.w/2) + '" font-family="sans-serif" font-size="0.30" fill="#64748b" text-anchor="middle">BRIDGE</text>');
+      } else if (e.type === 'text') {
+        parts.push('<text x="0" y="0" font-family="sans-serif" font-size="' + (e.fontSize||0.5) + '" fill="' + (e.color||'#0f172a') + '">' + esc(e.content) + '</text>');
+      } else if (e.type === 'door') {
+        const sweep = e.swing < 0 ? 0 : 1;
+        const endY = e.w * (e.swing < 0 ? -1 : 1);
+        parts.push(`<path d="M 0 0 L ${e.w} 0 A ${e.w} ${e.w} 0 0 ${sweep} 0 ${endY}" fill="none" stroke="#0f172a" stroke-width="0.03"/>`);
+      } else if (e.type === 'stairs') {
+        parts.push(`<rect x="0" y="0" width="${e.w}" height="${e.L}" fill="none" stroke="#0f172a" stroke-width="0.03"/>`);
+        const numSteps = Math.max(2, Math.round(e.L / 0.25));
+        const stepHeight = e.L / numSteps;
+        for (let i = 1; i < numSteps; i++) {
+          const y = i * stepHeight;
+          parts.push(`<line x1="0" y1="${y}" x2="${e.w}" y2="${y}" stroke="#0f172a" stroke-width="0.015"/>`);
+        }
+        parts.push(`<polygon points="${e.w/2},${e.L*0.9} ${e.w/2-0.15},${e.L*0.8} ${e.w/2+0.15},${e.L*0.8}" fill="#0f172a"/>`);
+      }
+      parts.push('</g>');
+      if (e.type === 'hull' || e.type === 'bridge') {
+        parts.push('<text x="' + (tx + (e.w||1)*s/2) + '" y="' + (ty - 0.48*s) + '" font-family="sans-serif" font-size="' + Math.max(0.36*s, 8) + '" font-weight="bold" fill="#334155" text-anchor="middle">' + esc(e.title) + '</text>');
+        parts.push('<text x="' + (tx + (e.w||1)*s/2) + '" y="' + (ty - 0.14*s) + '" font-family="sans-serif" font-size="' + Math.max(0.30*s, 8) + '" fill="#334155" text-anchor="middle">' + esc(dimsText(e)) + '</text>');
+      }
+    }
+  });
+  parts.push('</svg>');
+  download('boat_plan.svg', URL.createObjectURL(new Blob([parts.join('\n')], {type: 'image/svg+xml'})));
+};
+
+resize(); fit(); syncPanel();
+</script>
+</body>
+</html>
