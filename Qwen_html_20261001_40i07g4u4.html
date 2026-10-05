@@ -40,7 +40,7 @@
   
   <div class="section-title">Project</div>
   <div class="grp">
-    <button id="bNew" class="alt">📄 New Project</button>
+    <button id="bNew" class="alt"> New Project</button>
     <button id="bSave" class="alt">💾 Save Project (.json)</button>
     <button id="bLoad" class="alt">📂 Load Project (.json)</button>
     <input type="file" id="fileInput" accept=".json" style="display:none">
@@ -84,7 +84,7 @@
     <button id="bMeasure" class="tool">📏 Tape Measurer</button>
     <button id="bText" class="tool">🔤 Add Text Label</button>
     <button id="bDoor" class="tool">🚪 Add Door</button>
-    <button id="bStairs" class="tool">🪜 Add Stairs</button>
+    <button id="bStairs" class="tool"> Add Stairs</button>
   </div>
 
   <div class="section-title">View & Export</div>
@@ -112,23 +112,97 @@
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 let DPR = window.devicePixelRatio || 1;
 
+// Helper function to create walls
+function wall(x1, y1, x2, y2, thickness = 0.15) {
+  return { type: 'wall', x1, y1, x2, y2, thickness, color: '#0f172a' };
+}
+
 const state = {
   els: [
     // DECK 1: Engine & Storage (7.5m x 27m)
-    { type: 'hull', x: 0, y: 0, w: 7.5, L: 27, title: 'DECK 1: ENGINE & STORAGE', labels: [{t: 'ENGINE ROOM', fx: 0.5, fy: 0.3}, {t: 'MAIN STORAGE', fx: 0.5, fy: 0.7}] },
-    // DECK 2: Living & Garage (7.5m x 27m)
-    { type: 'hull', x: 10, y: 0, w: 7.5, L: 27, title: 'DECK 2: LIVING & GARAGE', labels: [{t: 'MASTER BED', fx: 0.25, fy: 0.08}, {t: 'EN-SUITE', fx: 0.75, fy: 0.08}, {t: 'BEDROOM 2', fx: 0.25, fy: 0.20}, {t: 'BEDROOM 3', fx: 0.75, fy: 0.20}, {t: 'BATHROOM', fx: 0.25, fy: 0.32}, {t: 'LAUNDRY', fx: 0.75, fy: 0.32}, {t: 'CUPBOARD', fx: 0.25, fy: 0.45}, {t: 'PET ROOM', fx: 0.75, fy: 0.45}, {t: 'WORKSHOP', fx: 0.5, fy: 0.60}, {t: 'HALLWAY / STAIRS', fx: 0.5, fy: 0.75}, {t: 'CAR GARAGE (BACK 5M)', fx: 0.5, fy: 0.90}] },
-    // DECK 3: Main Living (7.5m x 22m)
-    { type: 'hull', x: 20, y: 0, w: 7.5, L: 22, title: 'DECK 3: MAIN LIVING', labels: [{t: '1M FRONT DECK', fx: 0.5, fy: 0.05}, {t: 'FRONT DOOR', fx: 0.5, fy: 0.12}, {t: 'LIVING ROOM', fx: 0.5, fy: 0.30}, {t: 'KITCHEN', fx: 0.25, fy: 0.50}, {t: 'TOILET', fx: 0.75, fy: 0.50}, {t: 'OFFICE / GAMING', fx: 0.5, fy: 0.70}, {t: 'STAIRS DOWN', fx: 0.5, fy: 0.85}, {t: '1M SIDE DECKS', fx: 0.5, fy: 0.95}] },
+    { type: 'hull', x: 0, y: 0, w: 7.5, L: 27, title: 'DECK 1: ENGINE & STORAGE', labels: [] },
     
-    // BRIDGE: Fixed to be exactly 3.5m wide and 7m long!
-    { type: 'bridge', x: 22, y: -4, w: 3.5, L: 7, title: 'BRIDGE / HELM' },
+    // Walls for Deck 1 - Engine Room at front, Storage at back
+    wall(0, 8, 7.5, 8), // Horizontal wall separating engine room from storage
+    wall(3.75, 8, 3.75, 27), // Center wall in storage area
     
-    { type: 'stairs', x: 13, y: 19, w: 1.5, L: 3.0 },
-    { type: 'stairs', x: 23, y: 17, w: 1.5, L: 3.0 },
-    { type: 'door', x: 10, y: 5, w: 1.0, swing: 1 },
-    { type: 'door', x: 10, y: 10, w: 1.0, swing: 1 },
-    { type: 'door', x: 20, y: 8, w: 1.0, swing: 1 }
+    { type: 'text', x: 1.5, y: 3, content: 'ENGINE ROOM', fontSize: 0.6, color: '#334155' },
+    { type: 'text', x: 1.5, y: 15, content: 'MAIN STORAGE', fontSize: 0.6, color: '#334155' },
+    { type: 'text', x: 5.5, y: 15, content: 'MAIN STORAGE', fontSize: 0.6, color: '#334155' },
+    
+    // DECK 2: Living & Garage (7.5m x 27m) - Workshop at FRONT, Garage at BACK
+    { type: 'hull', x: 10, y: 0, w: 7.5, L: 27, title: 'DECK 2: LIVING & GARAGE', labels: [] },
+    
+    // Walls for Deck 2 - Workshop at front (small), bedrooms in middle, garage at back
+    wall(10, 3, 17.5, 3), // Horizontal wall - workshop at very front
+    wall(13.75, 0, 13.75, 3), // Center wall in workshop
+    wall(10, 3, 10, 12), // Left wall - hallway
+    wall(17.5, 3, 17.5, 12), // Right wall - hallway
+    wall(10, 6, 13.75, 6), // Horizontal - Master bed divider
+    wall(13.75, 6, 17.5, 6), // Horizontal - En-suite divider
+    wall(13.75, 3, 13.75, 9), // Vertical - between master and beds
+    wall(10, 9, 17.5, 9), // Horizontal - bathroom/laundry
+    wall(13.75, 9, 13.75, 12), // Vertical - bathroom/laundry divider
+    wall(10, 12, 17.5, 12), // Horizontal - cupboard/pet room
+    wall(13.75, 12, 13.75, 15), // Vertical - cupboard/pet divider
+    wall(10, 15, 17.5, 15), // Horizontal - hallway start
+    wall(10, 22, 17.5, 22), // Horizontal - garage starts here
+    
+    // Room labels for Deck 2
+    { type: 'text', x: 11, y: 1, content: 'WORKSHOP', fontSize: 0.5, color: '#334155' },
+    { type: 'text', x: 15.5, y: 1, content: 'WORKSHOP', fontSize: 0.5, color: '#334155' },
+    { type: 'text', x: 11.5, y: 4.5, content: 'MASTER BED', fontSize: 0.45, color: '#334155' },
+    { type: 'text', x: 15.5, y: 4.5, content: 'EN-SUITE', fontSize: 0.45, color: '#334155' },
+    { type: 'text', x: 11.5, y: 7.5, content: 'BEDROOM 2', fontSize: 0.45, color: '#334155' },
+    { type: 'text', x: 15.5, y: 7.5, content: 'BEDROOM 3', fontSize: 0.45, color: '#334155' },
+    { type: 'text', x: 11.5, y: 10.5, content: 'BATHROOM', fontSize: 0.45, color: '#334155' },
+    { type: 'text', x: 15.5, y: 10.5, content: 'LAUNDRY', fontSize: 0.45, color: '#334155' },
+    { type: 'text', x: 11.5, y: 13.5, content: 'CUPBOARD', fontSize: 0.45, color: '#334155' },
+    { type: 'text', x: 15.5, y: 13.5, content: 'PET ROOM', fontSize: 0.45, color: '#334155' },
+    { type: 'text', x: 13.75, y: 18, content: 'HALLWAY', fontSize: 0.5, color: '#334155' },
+    { type: 'text', x: 13.75, y: 24.5, content: 'CAR GARAGE (5M)', fontSize: 0.5, color: '#334155' },
+    
+    // Doors for Deck 2
+    { type: 'door', x: 12, y: 3, w: 0.9, swing: 1 },
+    { type: 'door', x: 15, y: 3, w: 0.9, swing: 1 },
+    { type: 'door', x: 12, y: 6, w: 0.9, swing: 1 },
+    { type: 'door', x: 15, y: 9, w: 0.9, swing: 1 },
+    { type: 'door', x: 12, y: 12, w: 0.9, swing: 1 },
+    { type: 'door', x: 15, y: 12, w: 0.9, swing: 1 },
+    
+    // Stairs Deck 2 to Deck 3
+    { type: 'stairs', x: 13, y: 16, w: 1.5, L: 2.5 },
+    
+    // DECK 3: Main Living (7.5m x 22m) - shorter to leave garage space
+    { type: 'hull', x: 20, y: 0, w: 7.5, L: 22, title: 'DECK 3: MAIN LIVING', labels: [] },
+    
+    // Walls for Deck 3 - Front deck, living, kitchen, office
+    wall(20, 2, 27.5, 2), // Horizontal - front deck separation
+    wall(20, 8, 27.5, 8), // Horizontal - living room to kitchen/toilet
+    wall(23.75, 8, 23.75, 14), // Vertical - kitchen/toilet divider
+    wall(20, 14, 27.5, 14), // Horizontal - kitchen/toilet to office
+    wall(20, 18, 27.5, 18), // Horizontal - office to stairs
+    
+    // Room labels for Deck 3
+    { type: 'text', x: 22, y: 0.5, content: '1M FRONT DECK', fontSize: 0.45, color: '#334155' },
+    { type: 'text', x: 25, y: 0.5, content: '1M FRONT DECK', fontSize: 0.45, color: '#334155' },
+    { type: 'text', x: 23.75, y: 1, content: 'FRONT DOOR', fontSize: 0.5, color: '#334155' },
+    { type: 'text', x: 23.75, y: 5, content: 'LIVING ROOM', fontSize: 0.6, color: '#334155' },
+    { type: 'text', x: 21.5, y: 11, content: 'KITCHEN', fontSize: 0.5, color: '#334155' },
+    { type: 'text', x: 25.5, y: 11, content: 'TOILET', fontSize: 0.5, color: '#334155' },
+    { type: 'text', x: 23.75, y: 16, content: 'OFFICE / GAMING', fontSize: 0.5, color: '#334155' },
+    { type: 'text', x: 23.75, y: 20, content: 'STAIRS DOWN', fontSize: 0.5, color: '#334155' },
+    { type: 'text', x: 21, y: 21, content: '1M SIDE DECK', fontSize: 0.4, color: '#334155' },
+    { type: 'text', x: 26, y: 21, content: '1M SIDE DECK', fontSize: 0.4, color: '#334155' },
+    
+    // Door for Deck 3
+    { type: 'door', x: 23, y: 2, w: 1.0, swing: 1 },
+    
+    // Stairs Deck 3 down
+    { type: 'stairs', x: 23, y: 18.5, w: 1.5, L: 2.5 },
+    
+    // BRIDGE: Exactly 3.5m wide and 7m long
+    { type: 'bridge', x: 22, y: -4, w: 3.5, L: 7, title: 'BRIDGE / HELM' }
   ],
   sel: -1, zoom: 20, ox: 50, oy: 150, mode: null, sx: 0, sy: 0,
   measureStart: null, wallStart: null, drawColor: '#ef4444', drawWidth: 0.1
@@ -141,7 +215,6 @@ function resize(){
 }
 window.addEventListener('resize', resize);
 
-/* ---------- geometry (meters) ---------- */
 function hullPath(e){
   const w = e.w, L = e.L, bx = w/2;
   return 'M ' + bx + ' 0 C ' + (w*0.786) + ' ' + (L*0.154) + ', ' + w + ' ' + (L*0.385) + ', ' + w + ' ' + (L*0.692) +
@@ -152,7 +225,6 @@ function dPath(x, y, w, L){
   const r = w/2;
   return 'M ' + x + ' ' + (y+L) + ' L ' + x + ' ' + (y+r) + ' A ' + r + ' ' + r + ' 0 0 1 ' + (x+w) + ' ' + (y+r) + ' L ' + (x+w) + ' ' + (y+L) + ' Z';
 }
-// FIXED BRIDGE LOGIC: Dynamically scales the deck surround so small bridges don't break
 function bridgeRoom(e) {
   const deck = Math.min(2, e.w / 3, e.L / 3); 
   return {x: e.x + deck, y: e.y + deck, w: e.w - deck * 2, L: e.L - deck * 2};
@@ -165,7 +237,6 @@ function dimsText(e){
   return '(' + e.L + 'm long x ' + e.w + 'm wide)';
 }
 
-/* ---------- drawing ---------- */
 function drawGrid(w, h, s){
   ctx.strokeStyle = '#e8edf3'; ctx.lineWidth = 1;
   for (let gx = state.ox % s; gx < w; gx += s){ ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,h); ctx.stroke(); }
@@ -181,8 +252,6 @@ function drawElementOn(c, e, s, ox, oy, withTitles){
     c.strokeStyle = '#cbd5e1'; c.lineWidth = 2/s; c.setLineDash([6/s, 6/s]);
     c.beginPath(); c.moveTo(e.w/2, 0); c.lineTo(e.w/2, e.L);
     c.moveTo(0, e.L/2); c.lineTo(e.w, e.L/2); c.stroke(); c.setLineDash([]);
-    (e.labels || []).forEach(lb => { c.fillStyle = '#64748b'; c.font = '0.30px sans-serif';
-      c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(lb.t, e.w*lb.fx, e.L*lb.fy); });
   } else if (e.type === 'bridge') {
     const r = bridgeRoom(e);
     c.fillStyle = '#e2e8f0'; c.strokeStyle = '#94a3b8'; c.lineWidth = 3/s;
@@ -279,7 +348,6 @@ function draw(){
     }
   }
 
-  // Wall preview
   if (state.mode === 'place_wall' && state.wallStart) {
     const pt = toWorld(lastMouseX, lastMouseY);
     ctx.save(); ctx.translate(state.ox, state.oy); ctx.scale(state.zoom, state.zoom);
@@ -304,11 +372,9 @@ function draw(){
   }
 }
 
-/* ---------- interaction ---------- */
 let lastMouseX = 0, lastMouseY = 0;
 function toWorld(mx, my){ return [(mx - state.ox)/state.zoom, (my - state.oy)/state.zoom]; }
 
-// Math to detect if user clicked on a wall line
 function pointToSegmentDist(px, py, x1, y1, x2, y2) {
   const dx = x2 - x1, dy = y2 - y1;
   const lenSq = dx*dx + dy*dy;
@@ -446,7 +512,6 @@ cv.addEventListener('wheel', ev => {
   draw();
 }, {passive: false});
 
-/* ---------- panel ---------- */
 const $ = id => document.getElementById(id);
 function syncPanel(){
   const e = state.els[state.sel];
@@ -512,7 +577,6 @@ function fit(){
   draw();
 }
 
-/* ---------- save / load ---------- */
 function download(name, url){ const a = document.createElement('a'); a.href = url; a.download = name; a.click(); }
 $('bSave').onclick = () => { download('boat_plan.json', URL.createObjectURL(new Blob([JSON.stringify(state.els, null, 2)], {type: 'application/json'}))); };
 $('bLoad').onclick = () => $('fileInput').click();
@@ -523,7 +587,6 @@ $('fileInput').onchange = (ev) => {
   reader.readAsText(file);
 };
 
-/* ---------- export ---------- */
 $('bPng').onclick = () => {
   const b = bounds(), m = 1, s = 200;
   const c2 = document.createElement('canvas');
@@ -568,7 +631,6 @@ $('bSvg').onclick = () => {
         parts.push('<path d="' + hullPath(e) + '" fill="#f8fafc" stroke="#0f172a" stroke-width="0.06"/>');
         parts.push('<line x1="' + e.w/2 + '" y1="0" x2="' + e.w/2 + '" y2="' + e.L + '" stroke="#cbd5e1" stroke-width="0.02" stroke-dasharray="0.06 0.06"/>');
         parts.push('<line x1="0" y1="' + e.L/2 + '" x2="' + e.w + '" y2="' + e.L/2 + '" stroke="#cbd5e1" stroke-width="0.02" stroke-dasharray="0.06 0.06"/>');
-        (e.labels || []).forEach(lb => parts.push('<text x="' + e.w*lb.fx + '" y="' + e.L*lb.fy + '" font-family="sans-serif" font-size="0.30" fill="#64748b" text-anchor="middle">' + esc(lb.t) + '</text>'));
       } else if (e.type === 'bridge') {
         const r = bridgeRoom(e);
         parts.push('<path d="' + dPath(0, 0, e.w, e.L) + '" fill="#e2e8f0" stroke="#94a3b8" stroke-width="0.03"/>');
